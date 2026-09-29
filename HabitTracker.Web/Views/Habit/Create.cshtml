@@ -1,0 +1,41 @@
+﻿@model HabitTracker.Model.CreateHabitViewModel
+
+<div class="container py-5 text-light" style="max-width:520px;">
+
+    <a asp-action="Index" class="text-info fw-semibold d-inline-flex align-items-center mb-3">
+        <i class="bi bi-chevron-left me-1"></i> Back
+    </a>
+
+    <div class="card bg-dark border-secondary rounded-4 shadow-sm p-4">
+
+        <h3 class="text-info fw-bold mb-4">Create New Habit</h3>
+
+        <form asp-action="Create" method="post" autocomplete="off">
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Habit Name</label>
+                <input name="Title"
+                       class="form-control bg-black text-light border-secondary rounded-3"
+                       placeholder="e.g., Wake up early" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Frequency</label>
+                <select name="Frequency"
+                        class="form-select bg-black text-light border-secondary rounded-3">
+                    <option value="Daily">Daily</option>
+                    <option value="Weekly">Weekly</option>
+                </select>
+            </div>
+
+            <div class="d-grid mt-4">
+                <button class="btn btn-info fw-semibold py-2 rounded-3">
+                    Save Habit
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>

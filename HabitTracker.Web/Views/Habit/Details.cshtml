@@ -1,0 +1,167 @@
+﻿@model HabitTracker.Model.HabitDetailsViewModel
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+
+<div class="container py-4 text-light">
+
+    <a asp-action="Index" class="text-info fw-semibold mb-3 d-inline-block">
+        <i class="bi bi-chevron-left"></i> Back
+    </a>
+
+    <h2 class="fw-bold mb-4">@Model.Habit.Title</h2>
+
+    <!-- Overview -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3 col-6"><div class="bg-dark border border-secondary rounded p-3 text-center"><h3 class="text-info">@Model.Score%</h3><small class="text-secondary">Score</small></div></div>
+        <div class="col-md-3 col-6"><div class="bg-dark border border-secondary rounded p-3 text-center"><h3 class="text-info">@Model.MonthChange%</h3><small class="text-secondary">Month</small></div></div>
+        <div class="col-md-3 col-6"><div class="bg-dark border border-secondary rounded p-3 text-center"><h3 class="text-info">@Model.YearChange%</h3><small class="text-secondary">Year</small></div></div>
+        <div class="col-md-3 col-6"><div class="bg-dark border border-secondary rounded p-3 text-center"><h3 class="text-info">@Model.Total</h3><small class="text-secondary">Total</small></div></div>
+    </div>
+
+    <!-- Graph -->
+    <h5 class="fw-bold text-info mt-4 mb-3">Score</h5>
+    <div class="bg-dark p-3 rounded border border-secondary mb-4">
+        <canvas id="tenDayChart" height="120"></canvas>
+    </div>
+
+    <!-- Calendar -->
+    <h5 class="fw-bold text-info mt-4 mb-3">Calendar</h5>
+
+    <div class="bg-dark p-3 rounded border border-secondary">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <button id="prevMonth" class="btn btn-outline-info btn-sm">&lt;</button>
+            <h5 class="fw-bold text-info" id="monthTitle"></h5>
+            <button id="nextMonth" class="btn btn-outline-info btn-sm">&gt;</button>
+        </div>
+
+        <div class="d-flex text-center fw-bold mb-2">
+            <div class="flex-fill">Mon</div><div class="flex-fill">Tue</div><div class="flex-fill">Wed</div>
+            <div class="flex-fill">Thu</div><div class="flex-fill">Fri</div><div class="flex-fill">Sat</div><div class="flex-fill">Sun</div>
+        </div>
+
+        <!-- EMPTY Calendar. JS fills all days -->
+        <div id="calendarGrid" class="d-flex flex-wrap"></div>
+
+    </div>
+
+    <!-- Best streaks -->
+    <h5 class="fw-bold text-info mt-4 mb-3">Best Streaks</h5>
+    @foreach (var s in Model.Streaks)
+    {
+        <div class="bg-dark p-2 px-3 rounded mb-2 border border-secondary d-flex justify-content-between">
+            <span class="fw-bold text-info">@s.Length</span>
+            <span class="text-secondary">@s.StartDate.ToShortDateString() — @s.EndDate.ToShortDateString()</span>
+        </div>
+    }
+
+    <!-- Delete habit -->
+    <form method="post" asp-action="Delete" class="mt-5">
+        <input type="hidden" name="id" value="@Model.Habit.Id" />
+        <button type="submit" class="btn btn-outline-danger w-100">Delete Habit</button>
+    </form>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    new Chart(document.getElementById("tenDayChart"), {
+        type: "line",
+        data: {
+            labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Last10DaysLabels)),
+            datasets: [{
+                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Last10DaysValues)),
+                borderColor: "#2D9CDB",
+                backgroundColor: "rgba(45,156,219,0.15)",
+                borderWidth: 2,
+                pointRadius: 4,
+                pointBackgroundColor: "#2D9CDB",
+                fill: true,
+                tension: 0.35
+            }]
+        },
+        options: { plugins: { legend: { display: false } } }
+    });
+
+    let currentYear = @Model.CurrentYear;
+    let currentMonth = @Model.CurrentMonth;
+    let habitId = "@Model.Habit.Id";
+
+    function loadMonth() {
+        fetch("/Habit/LoadMonth", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `habitId=${habitId}&year=${currentYear}&month=${currentMonth}`
+        })
+        .then(r => r.json())
+        .then(data => {
+
+            document.getElementById("monthTitle").innerText =
+                new Date(currentYear, currentMonth - 1)
+                .toLocaleString("en-US", { month: "long", year: "numeric" });
+
+            const grid = document.getElementById("calendarGrid");
+            grid.innerHTML = "";
+
+            // Empty spaces
+            for (let i = 0; i < data.firstDay; i++) {
+                grid.innerHTML += `<div style="width:14.28%;height:45px;"></div>`;
+            }
+
+            // Add days
+            for (const [date, completed] of Object.entries(data.days)) {
+
+                let bg = completed ? "#2D9CDB" : "#333";
+                let color = completed ? "#000" : "#aaa";
+
+                grid.innerHTML += `
+                <div class="calendar-day"
+                    data-date="${date}"
+                    style="
+                        width:14.28%;height:45px;border-radius:8px;
+                        margin-bottom:6px;display:flex;align-items:center;
+                        justify-content:center;cursor:pointer;font-weight:600;
+                        background:${bg};color:${color};
+                    ">
+                    ${new Date(date).getDate()}
+                </div>`;
+            }
+
+            attachDayClick();
+        });
+    }
+
+    function attachDayClick() {
+        document.querySelectorAll(".calendar-day").forEach(day => {
+            day.onclick = function () {
+
+                let date = this.dataset.date;
+
+                fetch("/Habit/ToggleFromCalendar", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `habitId=${habitId}&date=${date}`
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) loadMonth();
+                });
+            };
+        });
+    }
+
+    document.getElementById("prevMonth").onclick = () => {
+        currentMonth--;
+        if (currentMonth === 0) { currentMonth = 12; currentYear--; }
+        loadMonth();
+    };
+
+    document.getElementById("nextMonth").onclick = () => {
+        currentMonth++;
+        if (currentMonth === 13) { currentMonth = 1; currentYear++; }
+        loadMonth();
+    };
+
+    loadMonth();
+</script>

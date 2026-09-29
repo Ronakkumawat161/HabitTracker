@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HabitTracker.Repository.Interface\HabitTracker.Repository.Interface.csproj" />
+    <ProjectReference Include="..\HabitTracker.Service.Interface\HabitTracker.Service.Interface.csproj" />
+  </ItemGroup>
+
+</Project>
